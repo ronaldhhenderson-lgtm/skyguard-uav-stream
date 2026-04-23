@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Mission Control — DJI Neo 2</title>
+  <style>
+    :root {
+      --green:#2d6a2d; --green-lt:#e8f5e8; --green-mid:#4a9b4a;
+      --red:#c0392b; --red-lt:#fdecea;
+      --amber:#c8873a; --amber-lt:#fdf6ee;
+      --bark:#2e2a26; --muted:#6a6460; --border:#ddd5c8;
+      --cream:#faf8f4; --white:#fff;
+      --shadow:0 4px 24px rgba(0,0,0,.1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+      background:var(--cream);color:var(--bark);
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar{
+      background:#1e3020;color:#fff;
+      padding:14px 20px;
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .topbar-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .topbar-title .emoji{font-size:20px;}
+    #status-dot{
+      width:10px;height:10px;border-radius:50%;background:#4a9b4a;
+      display:inline-block;box-shadow:0 0 0 0 rgba(74,155,74,.4);
+    }
+    #status-dot.live{
+      background:#e53e3e;
+      animation:pulse 1.5s infinite;
+    }
+    @keyframes pulse{
+      0%  {box-shadow:0 0 0 0 rgba(229,62,62,.5);}
+      70% {box-shadow:0 0 0 8px rgba(229,62,62,0);}
+      100%{box-shadow:0 0 0 0 rgba(229,62,62,0);}
+    }
+    #status-text{font-size:13px;font-weight:600;opacity:.85;}
+
+    /* ── MAIN ── */
+    .main{max-width:480px;margin:0 auto;padding:24px 16px 40px;}
+
+    /* ── STATE CARD ── */
+    .state-card{
+      background:var(--white);border:1px solid var(--border);
+      border-radius:20px;padding:28px;
+      box-shadow:var(--shadow);margin-bottom:20px;
+      text-align:center;
+    }
+    .state-icon{font-size:52px;margin-bottom:12px;}
+    .state-title{font-size:22px;font-weight:700;color:var(--bark);margin-bottom:6px;}
+    .state-sub{font-size:14px;color:var(--muted);line-height:1.5;}
+
+    /* ── BIG BUTTON ── */
+    .btn-big{
+      width:100%;padding:18px;border:none;border-radius:16px;
+      font-size:17px;font-weight:700;cursor:pointer;
+      transition:all .15s;letter-spacing:-.01em;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+    }
+    .btn-big:active{transform:scale(.97);}
+    .btn-start{background:var(--green);color:#fff;}
+    .btn-start:hover{background:#235223;}
+    .btn-end  {background:var(--red);color:#fff;}
+    .btn-end:hover{background:#a02d22;}
+    .btn-big:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+    /* ── RTMP CARD ── */
+    #rtmp-card{display:none;}
+    .rtmp-card{
+      background:#1e2d1e;border-radius:16px;padding:20px;
+      margin-bottom:20px;
+    }
+    .rtmp-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a8d4a6;margin-bottom:10px;}
+    .rtmp-string{
+      font-family:"SF Mono","Fira Code",monospace;
+      font-size:12px;color:#e0f0de;
+      word-break:break-all;line-height:1.6;
+      background:rgba(255,255,255,.05);
+      border-radius:8px;padding:10px;
+      margin-bottom:12px;
+    }
+    .btn-copy{
+      width:100%;padding:11px;border:1.5px solid rgba(168,212,166,.4);
+      background:transparent;color:#a8d4a6;border-radius:10px;
+      font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;
+    }
+    .btn-copy:hover{background:rgba(168,212,166,.1);}
+    .btn-copy.copied{border-color:#a8d4a6;background:rgba(168,212,166,.15);}
+
+    /* ── STEPS ── */
+    .steps-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:20px;}
+    .steps-title{font-size:13px;font-weight:700;color:var(--bark);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+    .step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
+    .step:last-child{margin-bottom:0;}
+    .step-num{
+      flex-shrink:0;width:22px;height:22px;border-radius:50%;
+      background:var(--green);color:#fff;
+      font-size:11px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      margin-top:1px;
+    }
+    .step-txt{font-size:13px;color:var(--muted);line-height:1.5;}
+    .step-txt strong{color:var(--bark);}
+
+    /* ── LIVE STATUS ── */
+    #live-info{display:none;}
+    .live-banner{
+      background:linear-gradient(135deg,#c0392b,#922b21);
+      border-radius:14px;padding:16px 18px;
+      color:#fff;display:flex;align-items:center;gap:12px;
+      margin-bottom:20px;
+    }
+    .live-dot{width:12px;height:12px;border-radius:50%;background:#fff;animation:pulse 1.5s infinite;flex-shrink:0;}
+    .live-text h4{font-size:15px;font-weight:700;}
+    .live-text p{font-size:12px;opacity:.75;margin-top:2px;}
+    .yt-link{
+      display:flex;align-items:center;gap:8px;
+      background:var(--white);border:1px solid var(--border);
+      border-radius:12px;padding:12px 14px;
+      font-size:13px;color:var(--green);font-weight:600;
+      text-decoration:none;margin-bottom:20px;
+      transition:background .12s;
+    }
+    .yt-link:hover{background:var(--green-lt);}
+
+    /* ── SPINNER ── */
+    .spinner{
+      display:inline-block;width:18px;height:18px;
+      border:2px solid rgba(255,255,255,.3);
+      border-top-color:#fff;border-radius:50%;
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ── TOAST ── */
+    #toast{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:#1e2d1e;color:#a8d4a6;
+      padding:10px 20px;border-radius:20px;
+      font-size:13px;font-weight:600;
+      opacity:0;transition:opacity .2s;pointer-events:none;
+      white-space:nowrap;z-index:999;
+    }
+    #toast.show{opacity:1;}
+
+    .mission-id{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;font-family:monospace;}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">
+    <span class="emoji">🚁</span> Mission Control
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="status-dot"></span>
+    <span id="status-text">Ready</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── IDLE STATE ── -->
+  <div id="idle-state">
+    <div class="state-card">
+      <div class="state-icon">🛡️</div>
+      <div class="state-title">Ready for Takeoff</div>
+      <div class="state-sub">Tap "Start Mission" to create a YouTube Live broadcast and get the RTMP stream key for DJI Fly.</div>
+    </div>
+    <button class="btn-big btn-start" id="btn-start" onclick="startMission()">
+      <span>▶</span> Start Mission
+    </button>
+  </div>
+
+  <!-- ── LIVE STATE ── -->
+  <div id="live-info">
+    <div class="live-banner">
+      <div class="live-dot"></div>
+      <div class="live-text">
+        <h4>🔴 LIVE — Mission Active</h4>
+        <p id="live-duration">Recording in progress</p>
+      </div>
+    </div>
+
+    <a id="yt-watch-link" class="yt-link" href="#" target="_blank">
+      <span>▶️</span> <span>Watch on YouTube (Unlisted)</span>
+    </a>
+
+    <!-- RTMP card -->
+    <div id="rtmp-card" class="rtmp-card">
+      <div class="rtmp-label">📡 Paste into DJI Fly → RTMP Address (streams to this computer)</div>
+      <div class="rtmp-string" id="rtmp-display">—</div>
+      <button class="btn-copy" id="btn-copy" onclick="copyRtmp()">📋 Copy RTMP String</button>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps-card">
+      <div class="steps-title">📱 DJI Fly Setup Steps</div>
+      <div class="step"><div class="step-num">1</div><div class="step-txt">Make sure your <strong>phone is on the same WiFi</strong> as this computer</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-txt">Copy the RTMP string above</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-txt"><strong>DJI Fly</strong> → GO FLY → <strong>Transmission</strong> → <strong>Live Streaming</strong></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-txt">Select <strong>RTMP</strong> → paste into <strong>RTMP Address</strong></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-txt">Set <strong>720p / 3–5 Mbps</strong> → tap <strong>Start</strong> → countdown 3–3–1</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-txt">When landing: tap <strong>End Mission</strong> — video saves automatically to this computer</div></div>
+    </div>
+
+    <button class="btn-big btn-end" id="btn-end" onclick="endMission()">
+      <span>■</span> End Mission
+    </button>
+    <div class="mission-id" id="mission-id-display"></div>
+  </div>
+
+</div>
+
+<div id="toast">Copied!</div>
+
+<script>
+  // ── State ────────────────────────────────────────────────
+  let currentMission = null;
+  let startTime      = null;
+  let durationTimer  = null;
+
+  // Load persisted mission on page load
+  window.onload = () => {
+    const saved = sessionStorage.getItem('current-mission');
+    if (saved) {
+      try {
+        currentMission = JSON.parse(saved);
+        startTime = new Date(currentMission.startTime);
+        showLiveState();
+      } catch(e) { sessionStorage.removeItem('current-mission'); }
+    }
+  };
+
+  // ── Start Mission ────────────────────────────────────────
+  async function startMission() {
+    const btn = document.getElementById('btn-start');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creating broadcast…';
+
+    try {
+      const res  = await fetch('/api/mission/start', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ title: `Mission ${new Date().toLocaleString()}` }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Unknown error');
+
+      currentMission = { ...data, startTime: new Date().toISOString() };
+      sessionStorage.setItem('current-mission', JSON.stringify(currentMission));
+      startTime = new Date();
+      showLiveState();
+
+    } catch (err) {
+      alert('❌ Could not start mission:\n' + err.message);
+      btn.disabled = false;
+      btn.innerHTML = '<span>▶</span> Start Mission';
+    }
+  }
+
+  // ── End Mission ──────────────────────────────────────────
+  async function endMission() {
+    if (!confirm('End this mission? The YouTube stream will stop and the recording will be saved.')) return;
+
+    const btn = document.getElementById('btn-end');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Ending…';
+
+    try {
+      const res  = await fetch('/api/mission/end', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ missionId: currentMission.missionId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Unknown error');
+
+      clearInterval(durationTimer);
+      sessionStorage.removeItem('current-mission');
+      currentMission = null;
+      showIdleState();
+      showToast('✅ Mission ended. VOD saves in ~15 min.');
+
+    } catch (err) {
+      alert('❌ Error ending mission:\n' + err.message);
+      btn.disabled = false;
+      btn.innerHTML = '<span>■</span> End Mission';
+    }
+  }
+
+  // ── UI: Live state ───────────────────────────────────────
+  function showLiveState() {
+    document.getElementById('idle-state').style.display = 'none';
+    document.getElementById('live-info').style.display  = 'block';
+    document.getElementById('rtmp-card').style.display  = 'block';
+
+    document.getElementById('rtmp-display').textContent = currentMission.fullRtmpString || '—';
+    document.getElementById('yt-watch-link').href       = currentMission.youtubeWatchUrl || '#';
+    document.getElementById('mission-id-display').textContent = 'Mission ID: ' + currentMission.missionId;
+
+    document.getElementById('status-dot').classList.add('live');
+    document.getElementById('status-text').textContent = '🔴 LIVE';
+
+    // Duration timer
+    clearInterval(durationTimer);
+    durationTimer = setInterval(updateDuration, 1000);
+    updateDuration();
+  }
+
+  function showIdleState() {
+    document.getElementById('idle-state').style.display = 'block';
+    document.getElementById('live-info').style.display  = 'none';
+    document.getElementById('btn-start').disabled = false;
+    document.getElementById('btn-start').innerHTML = '<span>▶</span> Start Mission';
+    document.getElementById('status-dot').classList.remove('live');
+    document.getElementById('status-text').textContent = 'Ready';
+  }
+
+  // ── Copy RTMP ────────────────────────────────────────────
+  function copyRtmp() {
+    const str = currentMission?.fullRtmpString;
+    if (!str) return;
+    navigator.clipboard.writeText(str).then(() => {
+      const btn = document.getElementById('btn-copy');
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied!';
+      showToast('RTMP string copied!');
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.textContent = '📋 Copy RTMP String';
+      }, 2000);
+    });
+  }
+
+  // ── Duration ─────────────────────────────────────────────
+  function updateDuration() {
+    if (!startTime) return;
+    const s = Math.floor((Date.now() - startTime.getTime()) / 1000);
+    const h = String(Math.floor(s/3600)).padStart(2,'0');
+    const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+    const sec = String(s%60).padStart(2,'0');
+    document.getElementById('live-duration').textContent = `${h}:${m}:${sec} elapsed`;
+  }
+
+  // ── Toast ────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
