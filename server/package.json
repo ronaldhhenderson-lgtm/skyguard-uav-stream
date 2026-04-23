@@ -1,0 +1,21 @@
+{
+  "name": "dji-neo2-stream-server",
+  "version": "1.0.0",
+  "description": "DJI Neo 2 to YouTube Live Stream backend server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning server.js",
+    "dev": "node --no-warnings=ExperimentalWarning --watch server.js",
+    "setup-oauth": "node --no-warnings=ExperimentalWarning scripts/setup-oauth.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "googleapis": "^140.0.1",
+    "node-media-server": "^2.7.0",
+    "uuid": "^9.0.1"
+  }
+}
