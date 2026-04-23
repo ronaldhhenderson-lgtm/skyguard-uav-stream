@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets — NEVER commit these
+.env
+tokens.json
+
+# Runtime data
+data/
+recordings/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
