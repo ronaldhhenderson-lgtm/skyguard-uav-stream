@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Mission Viewer — Management Portal</title>
+  <style>
+    :root{
+      --cream:#faf8f4; --parchment:#f2ede4; --border:#ddd5c8;
+      --bark:#2e2a26; --muted:#7a736a;
+      --moss:#5c7a5a; --sage:#8aab87; --sage-lt:#e8f4e6;
+      --sky:#4a7fa0; --sky-lt:#edf5fa;
+      --red:#c0392b; --red-lt:#fdecea;
+      --amber:#c8873a;
+      --white:#fff;
+      --shadow:0 4px 24px rgba(0,0,0,.08);
+      --shadow-md:0 8px 40px rgba(0,0,0,.13);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+      background:var(--cream);color:var(--bark);
+      min-height:100vh;-webkit-font-smoothing:antialiased;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar{\ackground:#2a4428;color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+    .topbar-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    #logout-btn{display:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+    #logout-btn:hover{background:rgba(255,255,255,.18);}
+
+    /* ── PASSCODE SCREEN ── */
+    #screen-login{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-height:calc(100vh - 52px);padding:24px;
+    }
+    .login-card{
+      background:var(--white);border:1px solid var(--border);border-radius:24px;
+      padding:40px 36px;width:100%;max-width:380px;
+      box-shadow:var(--shadow-md);text-align:center;
+    }
+    .login-icon{font-size:48px;margin-bottom:16px;}
+    .login-card h2{font-size:22px;font-weight:700;color:var(--bark);margin-bottom:6px;}
+    .login-card p{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.5;}
+
+    .passcode-input{
+      width:100%;padding:14px 16px;
+      border:1.5px solid var(--border);border-radius:12px;
+      font-size:18px;font-family:inherit;text-align:center;
+      letter-spacing:.15em;background:var(--parchment);
+      color:var(--bark);outline:none;margin-bottom:12px;
+      transition:border-color .15s;
+    }
+    .passcode-input:focus{border-color:var(--moss);}
+    .passcode-input.error{border-color:var(--red);background:var(--red-lt);}
+
+    .btn-verify{
+      width:100%;padding:14px;border:none;border-radius:12px;
+      background:var(--moss);color:#fff;
+      font-size:16px;font-weight:700;cursor:pointer;
+      transition:background .15s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn-verify:hover{background:#4a6a48;}
+    .btn-verify:disabled{opacity:.5;cursor:not-allowed;}
+
+    #login-error{font-size:13px;color:var(--red);margin-top:10px;min-height:18px;}
+
+    /* ── MISSIONS SCREEN ── */
+    #screen-missions{display:none;max-width:720px;margin:0 auto;padding:32px 20px 60px;}
+    .missions-header{margin-bottom:28px;}
+    .missions-header h2{font-size:24px;font-weight:700;color:var(--bark);}
+    .missions-header p{font-size:14px;color:var(--muted);margin-top:4px;}
+
+    /* Tabs */
+    .tab-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+    .tab-btn{
+      padding:7px 16px;border:1.5px solid var(--border);border-radius:20px;
+      background:var(--white);font-size:13px;font-weight:600;color:var(--muted);
+      cursor:pointer;transition:all .12s;
+    }
+    .tab-btn.active{background:var(--moss);border-color:var(--moss);color:#fff;}
+    .tab-btn:hover:not(.active){background:var(--parchment);}
+
+    /* Mission list */
+    #missions-list{display:flex;flex-direction:column;gap:14px;}
+    #no-missions{text-align:center;padding:60px 20px;color:var(--muted);font-size:15px;}
+
+    .mission-card{
+      background:var(--white);border:1px solid var(--border);border-radius:16px;
+      padding:20px;box-shadow:var(--shadow);
+      transition:transform .12s,box-shadow .12s;
+    }
+    .mission-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.1);}
+
+    .mc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+    .mc-title{font-size:15px;font-weight:600;color:var(--bark);}
+    .mc-date{font-size:12px;color:var(--muted);margin-top:2px;}
+
+    .mc-badge{
+      flex-shrink:0;font-size:11px;font-weight:700;
+      padding:4px 10px;border-radius:20px;
+      letter-spacing:.04em;text-transform:uppercase;
+    }
+    .mc-badge.live  {background:#fdecea;color:var(--red);}
+    .mc-badge.ended {background:var(--sage-lt);color:var(--moss);}
+    .mc-badge.idle  {background:var(--parchment);color:var(--muted);}
+
+    .mc-meta{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;}
+    .mc-meta span{display:flex;align-items:center;gap:4px;}
+
+    .btn-watch{
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--sky);color:#fff;
+      padding:10px 18px;border-radius:10px;
+      font-size:13px;font-weight:700;text-decoration:none;
+      transition:background .12s;
+    }
+    .btn-watch:hover{background:#3a6f90;}
+    .btn-watch.live-now{background:var(--red);}
+    .btn-watch.live-now:hover{background:#a02d22;}
+
+    /* ── SPINNER ── */
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{\o{transform:rotate(360deg);}}
+
+    /* ── REFRESH ── */
+    .refresh-btn{
+      background:none;border:1px solid var(--border);border-radius:8px;
+      padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;
+      transition:all .12s;margin-left:auto;display:block;margin-bottom:12px;
+    }
+    .refresh-btn:hover{background:var(--parchment);border-color:var(--moss);color:var(--moss);}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">👔 Mission Viewer</div>
+  <button id="logout-btn" onclick="logout()">Sign Out</button>
+</div>
+
+<!-- ── LOGIN ── -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-icon">🔒</div>
+    <h2>Management Access</h2>
+    <p>Enter the management passcode to view mission recordings and live streams.</p>
+    <form onsubmit="verify(event)">
+      <input
+        id="passcode-input"
+        class="passcode-input"
+        type="password"
+        placeholder="Enter passcode"
+        autocomplete="current-password"
+        autofocus
+      />
+      <button class="btn-verify" id="btn-verify" type="submit">
+        <span>Unlock</span>
+      </button>
+    </form>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── MISSIONS ── -->
+<div id="screen-missions">
+  <div class="missions-header">
+    <h2>Mission Recordings</h2>
+    <p>All missions — click to watch on YouTube</p>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="filterMissions('all', this)">All</button>
+    <button class="tab-btn" onclick="filterMissions('live', this)">🔴 Live Now</button>
+    <button class="tab-btn" onclick="filterMissions('ended', this)">✓ Ended</button>
+  </div>
+
+  <button class="refresh-btn" onclick="loadMissions()">↻ Refresh</button>
+
+  <div id="missions-list">
+    <div id="no-missions" style="display:none;">No missions found.</div>
+  </div>
+</div>
+
+<script>
+  // ── Auth state ────────────────────────────────────────────
+  let passcode     = null;
+  let allMissions  = [];
+  let activeFilter = 'all';
+
+  window.onload = () => {
+    const saved = sessionStorage.getItem('portal-passcode');
+    if (saved) { passcode = saved; showMissions(); loadMissions(); }
+  };
+
+  // ── Verify ───────────────────────────────────────────────
+  async function verify(e) {
+    e.preventDefault();
+    const input = document.getElementById('passcode-input');
+    const btn   = document.getElementById('btn-verify');
+    const err   = document.getElementById('login-error');
+
+    const val = input.value.trim();
+    if (!val) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    err.textContent = '';
+    input.classList.remove('error');
+
+    try {
+      const res  = await fetch('/api/portal/verify', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ passcode: val }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        passcode = val;
+        sessionStorage.setItem('portal-passcode', val);
+        allMissions = data.missions || [];
+        showMissions();
+        renderMissions(allMissions);
+      } else if (res.status === 429) {
+        err.textContent = '⏱ Too many attempts. Try again in 15 minutes.';
+        input.classList.add('error');
+      } else {
+        err.textContent = '✗ Incorrect passcode';
+        input.classList.add('error');
+        input.value = '';
+        input.focus();
+      }
+    } catch(ex) {
+      err.textContent = '⚠ Connection error. Is the server running?';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Unlock</span>';
+    }
+  }
+
+  // ── Load missions ─────────────────────────────────────────
+  async function loadMissions() {
+    if (!passcode) return;
+    try {
+      const res = await fetch('/api/portal/missions', {
+        headers: { 'x-portal-passcode': passcode },
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      allMissions = data.missions || [];
+      renderMissions(filterList(allMissions, activeFilter));
+    } catch(ex) { console.error('Load missions error:', ex); }
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function renderMissions(list) {
+    const container = document.getElementById('missions-list');
+    const noMsg     = document.getElementById('no-missions');
+
+    // Clear existing cards
+    Array.from(container.children).forEach(c => {
+      if (c.id !== 'no-missions') c.remove();
+    });
+
+    if (!list.length) { noMsg.style.display = 'block'; return; }
+    noMsg.style.display = 'none';
+
+    list.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'mission-card';
+
+      const isLive = m.status === 'live';
+      const badgeClass = isLive ? 'live' : m.status === 'ended' ? 'ended' : 'idle';
+      const badgeText  = isLive ? '🔴 Live' : m.status === 'ended' ? '✓ Ended' : m.status;
+
+      const started = m.startedAt ? new Date(m.startedAt).toLocaleString() : '—';
+      const ended   = m.endedAt   ? new Date(m.endedAt).toLocaleString()   : (isLive ? 'In progress' : '—');
+
+      const duration = m.startedAt && m.endedAt
+        ? formatDuration(new Date(m.endedAt) - new Date(m.startedAt))
+        : isLive ? 'Live now' : '—';
+
+      card.innerHTML = `
+        <div class="mc-header">
+          <div>
+            <div class="mc-title">${escHtml(m.title || 'Mission')}</div>
+            <div class="mc-date">${new Date(m.createdAt).toLocaleString()}</div>
+          </div>
+          <span class="mc-badge ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="mc-meta">
+          <span>⏱ ${duration}</span>
+          <span>📅 Started: ${started}</span>
+          ${m.endedAt ? `<span>🏁 Ended: ${ended}</span>` : ''}
+        </div>
+        ${m.youtubeUrl ? `
+          <a class="btn-watch ${isLive ? 'live-now' : ''}"
+             href="${escHtml(m.youtubeUrl)}" target="_blank" rel="noopener">
+            ${isLive ? '🔴 Watch Live' : '▶️ Watch Recording'}
+          </a>
+        ` : '<span style="font-size:13px;color:var(--muted);">⏳ Processing — check back in ~15 min</span>'}
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // ── Filters ───────────────────────────────────────────────
+  function filterMissions(filter, btn) {
+    activeFilter = filter;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMissions(filterList(allMissions, filter));
+  }
+  function filterList(list, filter) {
+    if (filter === 'all') return list;
+    return list.filter(m => m.status === filter);
+  }
+
+  // ── Show/hide screens ─────────────────────────────────────
+  function showMissions() {
+    document.getElementById('screen-login').style.display    = 'none';
+    document.getElementById('screen-missions').style.display = 'block';
+    document.getElementById('logout-btn').style.display      = 'inline-block';
+  }
+  function logout() {
+    passcode = null;
+    sessionStorage.removeItem('portal-passcode');
+    document.getElementById('screen-login').style.display    = 'flex';
+    document.getElementById('screen-missions').style.display = 'none';
+    document.getElementById('logout-btn').style.display      = 'none';
+    document.getElementById('passcode-input').value = '';
+    document.getElementById('login-error').textContent = '';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
+  function formatDuration(ms) {
+    const s = Math.floor(ms/1000);
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h) return `${h}h ${m}m`;
+    if (m) return `${m}m ${sec}s`;
+    return `${sec}s`;
+  }
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
