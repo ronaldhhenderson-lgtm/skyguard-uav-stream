@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Recordings Library — DJI Neo 2</title>
+  <style>
+    :root{
+      --cream:#faf8f4; --parchment:#f2ede4; --border:#ddd5c8;
+      --bark:#2e2a26; --muted:#7a736a;
+      --moss:#5c7a5a; --sage:#8aab87; --sage-lt:#e8f4e6;
+      --sky:#4a7fa0; --sky-lt:#edf5fa;
+      --red:#c0392b; --red-lt:#fdecea;
+      --amber:#c8873a; --amber-lt:#fdf6ee;
+      --white:#fff;
+      --shadow:0 4px 24px rgba(0,0,0,.08);
+      --shadow-md:0 8px 40px rgba(0,0,0,.13);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+      background:var(--cream);color:var(--bark);
+      min-height:100vh;-webkit-font-smoothing:antialiased;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar{background:#1a3320;color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+    .topbar-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .topbar-right{display:flex;align-items:center;gap:12px;}
+    #logout-btn{display:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+    #logout-btn:hover{background:rgba(255,255,255,.18);}
+
+    /* ── LOGIN ── */
+    #screen-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 52px);padding:24px;}
+    .login-card{background:var(--white);border:1px solid var(--border);border-radius:24px;padding:40px 36px;width:100%;max-width:380px;box-shadow:var(--shadow-md);text-align:center;}
+    .login-icon{font-size:48px;margin-bottom:16px;}
+    .login-card h2{font-size:22px;font-weight:700;margin-bottom:6px;}
+    .login-card p{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.5;}
+    .passcode-input{width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:18px;font-family:inherit;text-align:center;letter-spacing:.15em;background:var(--parchment);color:var(--bark);outline:none;margin-bottom:12px;transition:border-color .15s;}
+    .passcode-input:focus{border-color:var(--moss);}
+    .passcode-input.error{border-color:var(--red);background:var(--red-lt);}
+    .btn-verify{width:100%;padding:14px;border:none;border-radius:12px;background:var(--moss);color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-verify:hover{background:#4a6a48;}
+    .btn-verify:disabled{opacity:.5;cursor:not-allowed;}
+    #login-error{font-size:13px;color:var(--red);margin-top:10px;min-height:18px;}
+
+    /* ── MAIN ── */
+    #screen-main{display:none;max-width:800px;margin:0 auto;padding:32px 20px 80px;}
+    .page-header{margin-bottom:28px;}
+    .page-header h2{font-size:24px;font-weight:700;}
+    .page-header p{font-size:14px;color:var(--muted);margin-top:4px;}
+
+    /* ── STATS BAR ── */
+    .stats-bar{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+    .stat-chip{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:12px 16px;flex:1;min-width:110px;text-align:center;}
+    .stat-chip .num{font-size:22px;font-weight:700;color:var(--bark);}
+    .stat-chip .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+
+    /* ── FILTERS + REFRESH ── */
+    .controls{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+    .tab-btn{padding:7px 15px;border:1.5px solid var(--border);border-radius:20px;background:var(--white);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .12s;}
+    .tab-btn.active{background:var(--moss);border-color:var(--moss);color:#fff;}
+    .tab-btn:hover:not(.active){background:var(--parchment);}
+    .refresh-btn{margin-left:auto;background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .12s;}
+    .refresh-btn:hover{background:var(--parchment);border-color:var(--moss);color:var(--moss);}
+
+    /* ── AUTO-REFRESH INDICATOR ── */
+    .auto-refresh{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;}
+    .pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--moss);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+    /* ── CARDS ── */
+    #cards-list{display:flex;flex-direction:column;gap:14px;}
+    #no-records{text-align:center;padding:60px 20px;color:var(--muted);font-size:15px;display:none;}
+
+    .rec-card{background:var(--white);border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:var(--shadow);transition:transform .12s,box-shadow .12s;}
+    .rec-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.10);}
+
+    .rc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+    .rc-title{font-size:15px;font-weight:600;color:var(--bark);}
+    .rc-date{font-size:12px;color:var(--muted);margin-top:2px;}
+    .badge{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase;}
+    .badge.live   {background:var(--red-lt);color:var(--red);}
+    .badge.ended  {background:var(--sage-lt);color:var(--moss);}
+    .badge.idle   {background:var(--parchment);color:var(--muted);}
+
+    .rc-meta{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;}
+
+    /* ── FILE ROW ── */
+    .file-row{background:var(--parchment);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .file-info{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--bark);}
+    .file-icon{font-size:18px;}
+    .file-size{font-size:12px;color:var(--muted);background:var(--white);padding:2px 8px;border-radius:8px;}
+    .btn-dl{display:inline-flex;align-items:center;gap:6px;background:var(--moss);color:#fff;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;transition:background .12s;}
+    .btn-dl:hover{background:#4a6a48;}
+    .file-pending{font-size:13px;color:var(--amber);display:flex;align-items:center;gap:6px;}
+
+    /* ── ACTIONS ROW ── */
+    .actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .btn-yt{display:inline-flex;align-items:center;gap:6px;background:var(--sky);color:#fff;padding:9px 14px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;transition:background .12s;}
+    .btn-yt:hover{background:#3a6f90;}
+    .btn-yt.live-now{background:var(--red);}
+    .btn-yt.live-now:hover{background:#a02d22;}
+
+    /* ── SPINNER ── */
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* live card glow */
+    .rec-card.is-live{border-color:rgba(192,57,43,.3);box-shadow:0 0 0 3px rgba(192,57,43,.06),var(--shadow);}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">🎬 Recordings Library</div>
+  <div class="topbar-right">
+    <div class="auto-refresh" id="auto-refresh-label">
+      <span class="pulse-dot"></span> Auto-refreshing
+    </div>
+    <button id="logout-btn" onclick="logout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-icon">🔒</div>
+    <h2>Recordings Access</h2>
+    <p>Enter the management passcode to view all mission recordings saved on this computer.</p>
+    <form onsubmit="verify(event)">
+      <input id="passcode-input" class="passcode-input" type="password"
+             placeholder="Enter passcode" autocomplete="current-password" autofocus/>
+      <button class="btn-verify" id="btn-verify" type="submit"><span>Unlock</span></button>
+    </form>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="screen-main">
+  <div class="page-header">
+    <h2>Mission Recordings</h2>
+    <p>Every flight auto-saves a video file to this computer. New entries appear automatically.</p>
+  </div>
+
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-chip"><div class="num" id="stat-total">—</div><div class="lbl">Total Flights</div></div>
+    <div class="stat-chip"><div class="num" id="stat-live">—</div><div class="lbl">Live Now</div></div>
+    <div class="stat-chip"><div class="num" id="stat-saved">—</div><div class="lbl">Files Saved</div></div>
+    <div class="stat-chip"><div class="num" id="stat-size">—</div><div class="lbl">Total Size</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="tab-btn active" onclick="filter('all',this)">All</button>
+    <button class="tab-btn" onclick="filter('live',this)">🔴 Live</button>
+    <button class="tab-btn" onclick="filter('ended',this)">✓ Ended</button>
+    <button class="tab-btn" onclick="filter('saved',this)">💾 Has File</button>
+    <button class="refresh-btn" onclick="loadRecordings()">↻ Refresh</button>
+  </div>
+
+  <div id="cards-list">
+    <div id="no-records">No missions found.</div>
+  </div>
+</div>
+
+<script>
+  let passcode     = null;
+  let allRecords   = [];
+  let activeFilter = 'all';
+  let refreshTimer = null;
+
+  window.onload = () => {
+    const saved = sessionStorage.getItem('recordings-passcode');
+    if (saved) { passcode = saved; showMain(); loadRecordings(); }
+  };
+
+  // ── Verify ───────────────────────────────────────────────
+  async function verify(e) {
+    e.preventDefault();
+    const input = document.getElementById('passcode-input');
+    const btn   = document.getElementById('btn-verify');
+    const err   = document.getElementById('login-error');
+    const val   = input.value.trim();
+    if (!val) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    err.textContent = '';
+    input.classList.remove('error');
+
+    try {
+      const res  = await fetch('/api/recordings/verify', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ passcode: val }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        passcode    = val;
+        allRecords  = data.recordings || [];
+        sessionStorage.setItem('recordings-passcode', val);
+        showMain();
+        renderAll(allRecords);
+      } else if (res.status === 429) {
+        err.textContent = 'Too many attempts. Try again in 15 minutes.';
+        input.classList.add('error');
+      } else {
+        err.textContent = 'Incorrect passcode';
+        input.classList.add('error');
+        input.value = '';
+        input.focus();
+      }
+    } catch(ex) {
+      err.textContent = 'Connection error — is the server running?';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Unlock</span>';
+    }
+  }
+
+  // ── Load ─────────────────────────────────────────────────
+  async function loadRecordings() {
+    if (!passcode) return;
+    try {
+      const res = await fetch('/api/recordings', { headers: { 'x-portal-passcode': passcode } });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      allRecords = data.recordings || [];
+      renderAll(filterList(allRecords, activeFilter));
+      updateStats(allRecords);
+    } catch(ex) { console.error('Load error:', ex); }
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function renderAll(list) {
+    const container = document.getElementById('cards-list');
+    const noMsg     = document.getElementById('no-records');
+    Array.from(container.children).forEach(c => { if (c.id !== 'no-records') c.remove(); });
+
+    if (!list.length) { noMsg.style.display = 'block'; return; }
+    noMsg.style.display = 'none';
+
+    list.forEach(r => container.appendChild(buildCard(r)));
+  }
+
+  function buildCard(r) {
+    const card   = document.createElement('div');
+    const isLive = r.status === 'live';
+    card.className = 'rec-card' + (isLive ? ' is-live' : '');
+
+    const badgeClass = isLive ? 'live' : r.status === 'ended' ? 'ended' : 'idle';
+    const badgeText  = isLive ? '🔴 Live' : r.status === 'ended' ? '✓ Ended' : r.status;
+
+    const started  = r.startedAt ? new Date(r.startedAt).toLocaleString()  : '—';
+    const ended    = r.endedAt   ? new Date(r.endedAt).toLocaleString()    : (isLive ? 'In progress' : '—');
+    const duration = r.startedAt && r.endedAt
+      ? fmtDuration(new Date(r.endedAt) - new Date(r.startedAt)) : isLive ? 'Live now' : '—';
+
+    // File section
+    let fileHtml = '';
+    if (r.recording && r.recording.downloadUrl) {
+      const dlUrl = r.recording.downloadUrl + '?p=' + encodeURIComponent(passcode);
+      fileHtml = `
+        <div class="file-row">
+          <div class="file-info">
+            <span class="file-icon">🎬</span>
+            <strong>Video recorded</strong>
+            <span class="file-size">${escHtml(r.recording.sizeFormatted)}</span>
+          </div>
+          <a class="btn-dl" href="${escHtml(dlUrl)}" download>⬇ Download FLV</a>
+        </div>`;
+    } else if (isLive) {
+      fileHtml = `<div class="file-row"><div class="file-pending">⏺ Recording in progress — file saves when mission ends</div></div>`;
+    } else if (r.status === 'ended') {
+      fileHtml = `<div class="file-row"><div class="file-pending">⏳ Video file not yet saved (stream may not have reached this server)</div></div>`;
+    }
+
+    // Action buttons
+    let actionsHtml = '';
+    if (r.youtubeUrl) {
+      actionsHtml = `
+        <div class="actions">
+          <a class="btn-yt ${isLive ? 'live-now' : ''}"
+             href="${escHtml(r.youtubeUrl)}" target="_blank" rel="noopener">
+            ${isLive ? '🔴 Watch Live on YouTube' : '▶ Watch on YouTube'}
+          </a>
+        </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="rc-header">
+        <div>
+          <div class="rc-title">${escHtml(r.title || 'Mission')}</div>
+          <div class="rc-date">Created ${new Date(r.createdAt).toLocaleString()}</div>
+        </div>
+        <span class="badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="rc-meta">
+        <span>⏱ ${duration}</span>
+        <span>📅 Started: ${started}</span>
+        ${r.endedAt ? `<span>🏁 Ended: ${ended}</span>` : ''}
+      </div>
+      ${fileHtml}
+      ${actionsHtml}
+    `;
+    return card;
+  }
+
+  // ── Stats ─────────────────────────────────────────────────
+  function updateStats(list) {
+    const live  = list.filter(r => r.status === 'live').length;
+    const saved = list.filter(r => r.recording && r.recording.downloadUrl).length;
+    const totalBytes = list.reduce((acc, r) => acc + (r.recording?.size || 0), 0);
+
+    document.getElementById('stat-total').textContent = list.length;
+    document.getElementById('stat-live').textContent  = live;
+    document.getElementById('stat-saved').textContent = saved;
+    document.getElementById('stat-size').textContent  = fmtBytes(totalBytes);
+  }
+
+  // ── Filters ───────────────────────────────────────────────
+  function filter(f, btn) {
+    activeFilter = f;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAll(filterList(allRecords, f));
+  }
+  function filterList(list, f) {
+    if (f === 'all')   return list;
+    if (f === 'saved') return list.filter(r => r.recording && r.recording.downloadUrl);
+    return list.filter(r => r.status === f);
+  }
+
+  // ── Show/hide ─────────────────────────────────────────────
+  function showMain() {
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('screen-main').style.display  = 'block';
+    document.getElementById('logout-btn').style.display   = 'inline-block';
+    // Auto-refresh every 20 seconds
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(loadRecordings, 20000);
+  }
+  function logout() {
+    passcode = null;
+    clearInterval(refreshTimer);
+    sessionStorage.removeItem('recordings-passcode');
+    document.getElementById('screen-login').style.display = 'flex';
+    document.getElementById('screen-main').style.display  = 'none';
+    document.getElementById('logout-btn').style.display   = 'none';
+    document.getElementById('passcode-input').value = '';
+    document.getElementById('login-error').textContent = '';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
+  function fmtDuration(ms) {
+    const s = Math.floor(ms/1000);
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h) return `${h}h ${m}m`;
+    if (m) return `${m}m ${sec}s`;
+    return `${sec}s`;
+  }
+  function fmtBytes(b) {
+    if (b < 1024)        return `${b} B`;
+    if (b < 1024*1024)   return `${(b/1024).toFixed(1)} KB`;
+    if (b < 1024**3)     return `${(b/1024/1024).toFixed(1)} MB`;
+    return `$x(b/1024**3).toFixed(2)} GB`;
+  }
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
